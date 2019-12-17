@@ -4,12 +4,20 @@ const router = express.Router();
 const gravatar = require('gravatar');
 const userModel = require('../model/user');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
+const validateRegisterInput = require('../validation/register');
+const validateLoginInput = require('../validation/login');
 
 
 //user register  1.email유무체크 2.avatar 생성 3.usermodel 4.password 암호화 5.response 
 
 router.post('/register', (req,res ) => {
+
+    const {errors, isValid } = validateRegisterInput(req.body);
+    if (!isValid){
+        return res.status(400).json(errors);
+    }
 
         userModel
             .findOne({email : req.body.email})
@@ -65,6 +73,48 @@ router.post('/register', (req,res ) => {
 //user login
 
 router.post('/login', (req,res) => {
+
+    //1.이메일 체크 2.암호 체크(디코딩) 3.returning jwt 4. response
+
+    userModel
+        .findOne({email : req.body.email})
+        .exec()
+        .then(user => {
+            if(!user){
+                return res.json({
+                    msg : "회원가입 후 로그인 해주세요"
+                });
+            }else{
+                bcrypt
+                    .compare(req.body.password, user.password)
+                    .then(isMatch => {
+                        if (isMatch){
+                            const payload = { id:user.id, name:user.name, avatar:user.avatar};
+
+                            const token = jwt.sign(
+                                payload,
+                                'secret',
+                                {expiresIn : 3600}
+                            );
+
+                            return res.json({
+                                msg : "successfull login",
+                                tokenInfo : 'bearer' + token
+                            });
+                        }else{
+                            res.json({
+                                msg : 'password incorrect'
+                            });
+                        }
+                    })
+                    .catch(err => res.json(err));
+            }
+        })
+        .catch(err => {
+            res.json({
+                msg : err.message
+            });
+        });
 
 });
 
