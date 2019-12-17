@@ -74,6 +74,11 @@ router.post('/register', (req,res ) => {
 
 router.post('/login', (req,res) => {
 
+    const {errors, isValid} = validateLoginInput(req.body);
+    if(!isValid){
+        return res.status(400).json(errors);
+    }
+
     //1.이메일 체크 2.암호 체크(디코딩) 3.returning jwt 4. response
 
     userModel
@@ -93,7 +98,7 @@ router.post('/login', (req,res) => {
 
                             const token = jwt.sign(
                                 payload,
-                                'secret',
+                                process.env.SECRET_KEY,
                                 {expiresIn : 3600}
                             );
 
